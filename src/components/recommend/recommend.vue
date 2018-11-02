@@ -1,39 +1,54 @@
 <template>
   <div class="recommend">
-    <div class="recommend-content">
-      <div v-if="recommends.length" class="slider-wrapper">
-        <slider>
-          <div v-for="item in recommends" :key="item.index">
-            <a :href="item.linkUrl">
-              <img :src="item.picUrl">
-            </a>
-          </div>
-        </slider>
+    <scroll class="recommend-content" :data="discList">
+      <div>
+        <div v-if="recommends.length" class="slider-wrapper">
+          <slider>
+            <div v-for="item in recommends" :key="item.index">
+              <a :href="item.linkUrl">
+                <img @load="loadImage" :src="item.picUrl">
+              </a>
+            </div>
+          </slider>
+        </div>
+        <div class="recommend-list">
+          <h1 class="list-title">热门歌单推荐</h1>
+          <ul>
+            <li v-for="item in discList" :key="item.index" class="item">
+              <div class="icon">
+                <img width="60" height="60" :src="item.imgurl">
+              </div>
+              <div class="text">
+                <h2 class="name" v-html="item.dissname"></h2>
+                <p class="desc" v-html="item.creator.name"></p>
+              </div>
+            </li>
+          </ul>
+        </div>
       </div>
-      <div class="recommend-list">
-        <h1 class="list-title">热门歌单推荐</h1>
-        <ul>
-        </ul>
-      </div>
-    </div>
+    </scroll>
   </div>
 </template>
 
 <script>
 import Slider from '@/base/slider/slider'
-import {getRecommend} from '@/api/recommend'
+import Scroll from '@/base/scroll/scroll'
+import {getRecommend, getDiscList} from '@/api/recommend'
 import {ERR_OK} from '@/api/config'
 export default {
   components: {
-    Slider
+    Slider,
+    Scroll
   },
   data() {
     return {
-      recommends: []
+      recommends: [],
+      discList: []
     }
   },
   created() {
     this._getRecommend()
+    this._getDiscList()
   },
   methods: {
     _getRecommend() {
@@ -42,6 +57,19 @@ export default {
           this.recommends = res.data.slider
         }
       })
+    },
+    _getDiscList() {
+      getDiscList().then(res => {
+        if (res.code === ERR_OK) {
+          this.discList = res.data.list
+        }
+      })
+    },
+    loadImage() {
+      if (!this.checkloaded) {
+        this.$refs.scroll.refresh()
+        this.checkloaded = true
+      }
     }
   }
 }
@@ -89,12 +117,13 @@ export default {
           flex: 1;
           line-height: 20px;
           overflow: hidden;
-          font-size: @font-size-medium;
           .name {
+            font-size: @font-size-medium;
             margin-bottom: 10px;
             color: @color-text;
           }
           .desc {
+            font-size: @font-size-medium;
             color: @color-text-d;
           }
         }
