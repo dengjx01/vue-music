@@ -3,6 +3,9 @@
     <div class="slider-group" ref="sliderGroup">
       <slot></slot>
     </div>
+    <div class="dots">
+      <span class="dot" v-for="(item, index) in dots" :key="item" :class="{active: currentPageIndex === index}"></span>
+    </div>
   </div>
 </template>
 
@@ -10,6 +13,12 @@
 import BScroll from 'better-scroll'
 import {addClass} from 'common/js/dom'
 export default {
+  data() {
+    return {
+      dots: [],
+      currentPageIndex: 0
+    }
+  },
   props: {
     // 是否循环播放
     loop: {
@@ -30,12 +39,25 @@ export default {
   mounted() {
     setTimeout(() => {
       this._setSliderWidth()
+      this._initDots()
       this._initSlider()
+
+      if (this.autoPlay) {
+        this._play()
+      }
     }, 20)
+
+    window.addEventListener('resize', () => {
+      if (!this.slider) {
+        return
+      }
+      this._setSliderWidth(true)
+      this.slider.refresh()
+    })
   },
   methods: {
     // 轮播图(sliderGroup)宽度
-    _setSliderWidth() {
+    _setSliderWidth(isResize) {
       // 拿到传过来的图片
       this.children = this.$refs.sliderGroup.children
 
@@ -51,11 +73,16 @@ export default {
         width += sliderWidth
       }
 
-      if (this.loop) {
+      if (this.loop && !isResize) {
         width += 2 * sliderWidth
       }
       this.$refs.sliderGroup.style.width = width + 'px'
     },
+    // 初始化轮播点
+    _initDots() {
+      this.dots = new Array(this.children.length)
+    },
+    // 初始化轮播图
     _initSlider() {
       this.slider = new BScroll(this.$refs.slider, {
         scrollX: true,
@@ -63,10 +90,33 @@ export default {
         momentum: false,
         snap: true,
         snapLoop: this.loop,
-        snapThreshold: 0.3,
+        snapThreshold: 0.2,
         snapSpeed: 400,
         click: true
       })
+
+      this.slider.on('scrollEnd', () => {
+        let pageIndex = this.slider.getCurrentPage().pageX
+        // 循环模式下 -1
+        if (this.loop) {
+          pageIndex -= 1
+        }
+        this.currentPageIndex = pageIndex
+
+        if (this.autoPlay) {
+          clearTimeout(this.timer)
+          this._play()
+        }
+      })
+    },
+    _play() {
+      let pageIndex = this.currentPageIndex + 1
+      if (this.loop) {
+        pageIndex += 1
+      }
+      this.timer = setTimeout(() => {
+        this.slider.goToPage(pageIndex, 0, 400)
+      }, this.interval)
     }
   }
 }
@@ -76,6 +126,7 @@ export default {
 @import '~common/less/variable';
 @import '~common/less/mixin';
   .slider{
+    position: relative;
     min-height: 1px;
     .slider-group{
       position: relative;
@@ -113,7 +164,7 @@ export default {
         border-radius: 50%;
         background: @color-text-l;
         &.active{
-          width: 20px;
+          width: 12px;
           border-radius: 5px;
           background: @color-text-ll;
         }
